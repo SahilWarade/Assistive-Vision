@@ -1,202 +1,318 @@
-# Assistive Vision – Web-Based Voice AI Navigation System (Free Map Stack)
+# Assistive Vision – Voice System Architecture
 
-## 1. Complete Frontend Folder Structure (Vite + React)
-
-```text
-assistive-vision-web/
-├── public/
-│   ├── manifest.json         # PWA configuration
-│   └── icons/                # App icons
-├── src/
-│   ├── components/           # Reusable UI components
-│   │   ├── AccessibleButton.tsx
-│   │   ├── VideoPreview.tsx
-│   │   └── MapView.tsx       # Leaflet Map component
-│   ├── hooks/                # Custom React hooks
-│   │   ├── useCamera.ts      # getUserMedia handling
-│   │   ├── useSpeech.ts      # Web Speech API wrapper
-│   │   └── useLocation.ts    # Geolocation API wrapper
-│   ├── services/             # API integrations
-│   │   ├── backendProxy.ts   # Calls to our Node.js backend
-│   │   └── routingService.ts # OpenRouteService API calls
-│   ├── App.tsx               # Main application routing & state
-│   ├── index.css             # Tailwind CSS entry
-│   └── main.tsx              # React DOM render
-├── .env.example              # VITE_BACKEND_URL, VITE_ORS_API_KEY
-├── package.json              # Dependencies (leaflet, react-leaflet, etc.)
-├── tailwind.config.js        # Tailwind configuration
-└── vite.config.ts            # Vite configuration
-```
-
-## 2. Leaflet + OpenStreetMap Integration Example
-
-```tsx
-import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-
-export function MapView({ userLocation, routeCoordinates }) {
-  return (
-    <MapContainer 
-      center={userLocation || [20.5937, 78.9629]} 
-      zoom={15} 
-      style={{ height: '100%', width: '100%', zIndex: 0 }}
-      zoomControl={false} // Disable zoom controls for cleaner UI
-    >
-      <TileLayer
-        attribution='&copy; OpenStreetMap contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      {userLocation && <Marker position={userLocation} />}
-      {routeCoordinates.length > 0 && (
-        <Polyline positions={routeCoordinates} color="blue" weight={5} />
-      )}
-    </MapContainer>
-  );
-}
-```
-
-## 3. OpenRouteService Routing Example
+## 1. Complete VoiceEngine Module
 
 ```typescript
-// src/services/routingService.ts
-export async function getRoute(startCoords: [number, number], endCoords: [number, number]) {
-  // ORS expects coordinates in [longitude, latitude] format
-  const start = `${startCoords[1]},${startCoords[0]}`;
-  const end = `${endCoords[1]},${endCoords[0]}`;
-  
-  const response = await fetch(
-    `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${import.meta.env.VITE_ORS_API_KEY}&start=${start}&end=${end}`
-  );
-  
-  if (!response.ok) throw new Error("Routing failed");
-  
-  const data = await response.json();
-  // Convert [lon, lat] back to [lat, lon] for Leaflet Polyline
-  const coordinates = data.features[0].geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
-  const instructions = data.features[0].properties.segments[0].steps;
-  
-  return { coordinates, instructions };
-}
-```
-
-## 4. Backend Proxy Structure (Node.js / Express)
-
-```text
-assistive-vision-backend/
-├── src/
-│   ├── controllers/
-│   │   ├── visionController.js  # Handles Gemini API calls
-│   │   └── voiceController.js   # Handles Sarvam API calls
-│   ├── middlewares/
-│   │   ├── rateLimiter.js       # Express-rate-limit
-│   │   └── errorHandler.js      # Global error handling
-│   ├── routes/
-│   │   └── api.js               # Express router
-│   └── server.js                # Express app setup
-├── .env                         # GEMINI_API_KEY, SARVAM_API_KEY
-└── package.json
-```
-
-## 5. Gemini API Backend Integration Example
-
-```javascript
-// src/controllers/visionController.js
-const { GoogleGenAI } = require('@google/genai');
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-exports.analyzeImage = async (req, res, next) => {
-  try {
-    const { base64Image, prompt } = req.body;
-    
-    // Strip the data:image/jpeg;base64, prefix if present
-    const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        { inlineData: { data: cleanBase64, mimeType: 'image/jpeg' } },
-        prompt
-      ]
-    });
-    
-    res.json({ result: response.text });
-  } catch (error) {
-    next(error);
-  }
+// src/services/VoiceEngine.ts
+export const LANGUAGE_CONFIG = {
+  'English': { code: 'en-IN', voice: 'meera' },
+  'Hindi': { code: 'hi-IN', voice: 'meera' },
+  'Marathi': { code: 'mr-IN', voice: 'meera' },
+  'Tamil': { code: 'ta-IN', voice: 'meera' },
+  'Telugu': { code: 'te-IN', voice: 'meera' },
+  'Bengali': { code: 'bn-IN', voice: 'meera' }
 };
+
+class VoiceEngineClass {
+  private currentLang = 'English';
+  private recognition: any = null;
+  public isListening = false;
+
+  constructor() {
+    this.currentLang = localStorage.getItem('appLanguage') || 'English';
+  }
+
+  setLanguage(lang: string) {
+    this.currentLang = lang;
+    localStorage.setItem('appLanguage', lang);
+  }
+
+  async speak(text: string): Promise<void> {
+    this.stopSpeaking();
+    try {
+      // 1. Try Sarvam API via Backend Proxy
+      const langCode = LANGUAGE_CONFIG[this.currentLang as keyof typeof LANGUAGE_CONFIG]?.code || 'en-IN';
+      const res = await fetch('/api/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, language: langCode })
+      });
+      if (!res.ok) throw new Error("Sarvam TTS failed");
+      
+      const arrayBuffer = await res.arrayBuffer();
+      await this.playAudioBuffer(arrayBuffer);
+    } catch (e) {
+      // 2. Fallback to Web Speech API
+      await this.speakWebSpeech(text);
+    }
+  }
+
+  private speakWebSpeech(text: string): Promise<void> {
+    return new Promise((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = LANGUAGE_CONFIG[this.currentLang as keyof typeof LANGUAGE_CONFIG]?.code || 'en-IN';
+      utterance.rate = 0.9;
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      window.speechSynthesis.speak(utterance);
+    });
+  }
+
+  private async playAudioBuffer(buffer: ArrayBuffer): Promise<void> {
+    const audioContext = new AudioContext();
+    const audioBuffer = await audioContext.decodeAudioData(buffer);
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+    return new Promise(resolve => {
+      source.onended = () => resolve();
+    });
+  }
+
+  stopSpeaking() {
+    window.speechSynthesis.cancel();
+  }
+
+  async listen(): Promise<string> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+      } catch (err) {
+        await this.speak("Microphone permission required.");
+        reject('audio-capture');
+        return;
+      }
+
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        reject('Speech recognition not supported');
+        return;
+      }
+
+      if (this.recognition) this.recognition.stop();
+
+      this.recognition = new SpeechRecognition();
+      this.recognition.continuous = false;
+      this.recognition.interimResults = false;
+      this.recognition.lang = LANGUAGE_CONFIG[this.currentLang as keyof typeof LANGUAGE_CONFIG]?.code || 'en-IN';
+
+      this.recognition.onstart = () => { this.isListening = true; };
+      this.recognition.onresult = (event: any) => resolve(event.results[0][0].transcript);
+      this.recognition.onerror = (event: any) => { this.isListening = false; reject(event.error); };
+      this.recognition.onend = () => { this.isListening = false; };
+
+      this.recognition.start();
+    });
+  }
+
+  stopListening() {
+    if (this.recognition) this.recognition.stop();
+    this.isListening = false;
+  }
+}
+
+export const VoiceEngine = new VoiceEngineClass();
 ```
 
-## 6. Sarvam API Integration Example
+## 2. Backend Sarvam TTS Proxy Example
 
 ```javascript
-// src/controllers/voiceController.js
-const axios = require('axios');
-
-exports.generateSpeech = async (req, res, next) => {
+// POST /api/speak
+app.post('/api/speak', async (req, res) => {
   try {
-    const { text, languageCode } = req.body;
-    
+    const { text, language } = req.body;
     const response = await axios.post('https://api.sarvam.ai/v1/text-to-speech', {
       text: text,
-      language_code: languageCode,
+      language_code: language,
       speaker: "meera"
     }, {
       headers: { 'Authorization': `Bearer ${process.env.SARVAM_API_KEY}` },
       responseType: 'arraybuffer'
     });
-    
     res.set('Content-Type', 'audio/wav');
     res.send(response.data);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: "TTS generation failed" });
   }
+});
+```
+
+## 3. Backend Sarvam STT Proxy Example
+
+```javascript
+// POST /api/listen
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/listen', upload.single('audio'), async (req, res) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', req.file.buffer, { filename: 'audio.wav' });
+    formData.append('language_code', req.body.language);
+
+    const response = await axios.post('https://api.sarvam.ai/v1/speech-to-text', formData, {
+      headers: { 
+        'Authorization': `Bearer ${process.env.SARVAM_API_KEY}`,
+        ...formData.getHeaders()
+      }
+    });
+    res.json({ transcript: response.data.transcript });
+  } catch (error) {
+    res.status(500).json({ error: "STT processing failed" });
+  }
+});
+```
+
+## 4. useAccessibleButton Hook
+
+```typescript
+import { useRef, useCallback } from 'react';
+
+export function useAccessibleButton(label: string, onActivate: () => void, speak: (text: string) => void) {
+  const lastTapRef = useRef<number>(0);
+
+  const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault(); // Prevent ghost clicks
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 500; // 500ms window for double tap
+
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      if (navigator.vibrate) navigator.vibrate([50]); // Haptic feedback
+      onActivate();
+      lastTapRef.current = 0; // Reset
+    } else {
+      speak(label);
+      lastTapRef.current = now;
+    }
+  }, [label, onActivate, speak]);
+
+  return handleTap;
+}
+```
+
+## 5. Continuous Listening Hook
+
+```typescript
+import { useEffect, useRef } from 'react';
+import { VoiceEngine } from '../services/VoiceEngine';
+
+export function useContinuousListen(onCommand: (cmd: string) => void, isActive: boolean) {
+  const isRunningRef = useRef(false);
+
+  useEffect(() => {
+    if (!isActive) {
+      isRunningRef.current = false;
+      VoiceEngine.stopListening();
+      return;
+    }
+
+    isRunningRef.current = true;
+    
+    const loop = async () => {
+      while (isRunningRef.current) {
+        try {
+          const command = await VoiceEngine.listen();
+          if (command && isRunningRef.current) {
+            onCommand(command);
+          }
+        } catch (e) {
+          // Handle silence/errors, wait briefly before restarting
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+    };
+    
+    loop();
+
+    return () => {
+      isRunningRef.current = false;
+      VoiceEngine.stopListening();
+    };
+  }, [isActive, onCommand]);
+}
+```
+
+## 6. Language-to-Voice Mapping Configuration
+
+```typescript
+export const LANGUAGE_CONFIG = {
+  'English': { code: 'en-IN', voice: 'meera', confirmText: 'I will now speak in English.' },
+  'Hindi': { code: 'hi-IN', voice: 'meera', confirmText: 'अब मैं हिंदी में बात करूँगा।' },
+  'Marathi': { code: 'mr-IN', voice: 'meera', confirmText: 'आता मी मराठीत बोलेन.' },
+  'Tamil': { code: 'ta-IN', voice: 'meera', confirmText: 'இப்போது நான் தமிழில் பேசுவேன்.' },
+  'Telugu': { code: 'te-IN', voice: 'meera', confirmText: 'ఇప్పుడు నేను తెలుగులో మాట్లాడతాను.' },
+  'Bengali': { code: 'bn-IN', voice: 'meera', confirmText: 'এখন আমি বাংলায় কথা বলব।' }
 };
 ```
 
-## 7. Mobile-First Responsive CSS Layout
+## 7. Mobile-Safe Double Tap Detection Logic
 
-The app uses Tailwind CSS for a highly responsive, mobile-first layout. Key classes used:
-- `min-h-screen flex flex-col`: Ensures the app takes up the full viewport height without scroll jank.
-- `flex-1 overflow-y-auto`: Allows content areas to scroll independently while keeping headers/footers fixed.
-- `grid grid-cols-2 gap-4`: Creates a touch-friendly grid for the main menu buttons.
-- `absolute inset-0 object-cover`: Ensures the camera preview fills its container perfectly without distortion.
-- `z-0` and `z-10`: Manages stacking contexts, ensuring the camera overlay sits above the Leaflet map.
+The `useAccessibleButton` hook uses `Date.now()` to track the exact millisecond of the last tap. By setting the threshold to `500ms` and calling `e.preventDefault()`, we bypass the browser's native 300ms click delay and prevent ghost clicks on mobile devices, ensuring the first tap speaks instantly and the second tap activates reliably.
 
-## 8. Performance Optimization Checklist
+## 8. Fix for Voice Not Triggering
 
-- [x] **Lazy Loading**: Use `React.lazy()` for heavy components like the Leaflet Map to ensure the initial JS bundle remains small.
-- [x] **Camera Throttling**: Only capture frames when the user explicitly requests an analysis, rather than streaming continuously to the backend.
-- [x] **Debounced GPS**: Throttle `navigator.geolocation.watchPosition` updates to once every 2 seconds to save battery and prevent UI stutter.
-- [x] **Image Compression**: Downscale images to 640x640 and use `image/jpeg` at 0.8 quality before sending to the backend to reduce payload size.
-- [x] **No Main Thread Blocking**: Use Web Workers for any heavy client-side processing (if added later) and rely on CSS transforms (`motion/react`) for animations.
+- **Microphone Permission**: Browsers block STT if permission isn't explicitly granted. `VoiceEngine.listen()` now calls `getUserMedia({ audio: true })` to force the permission prompt before initializing `SpeechRecognition`.
+- **User Gesture**: Browsers block TTS if not initiated by a user gesture. The initial single tap on any button serves as this gesture, unlocking the `AudioContext` and `speechSynthesis` for all future programmatic speech.
 
-## 9. Deployment Instructions for Vercel
+## 9. Full Example of One Working Feature (Find Object)
 
-1. Push the frontend code to a GitHub repository.
-2. Log in to Vercel and click "Add New Project".
-3. Import the GitHub repository.
-4. Vercel will automatically detect the Vite framework.
-5. In the "Environment Variables" section, add:
-   - `VITE_BACKEND_URL` (pointing to your deployed Node.js proxy)
-   - `VITE_ORS_API_KEY` (your free OpenRouteService key)
-6. Click "Deploy". The app will be live with a global CDN and automatic HTTPS.
+```tsx
+import React, { useEffect, useState } from 'react';
+import { VoiceEngine } from '../services/VoiceEngine';
+import { useCamera } from '../hooks/useCamera';
 
-## 10. Future Android Conversion Strategy
+export function FindObjectPage() {
+  const { stream } = useCamera();
+  const [target, setTarget] = useState('');
 
-To convert this web application into a native Android app in the future, the recommended approach is **Capacitor.js**:
+  useEffect(() => {
+    let isActive = true;
 
-1. **Why Capacitor?** It allows you to take this exact Vite + React codebase and wrap it in a native Android WebView. You don't need to rewrite the UI in Kotlin or React Native.
-2. **Native Plugins**: Capacitor provides official plugins for native features:
-   - `@capacitor/camera` (for more robust camera control)
-   - `@capacitor/geolocation` (for background GPS tracking)
-   - `@capacitor/haptics` (for native vibration)
-3. **Migration Steps**:
-   ```bash
-   npm install @capacitor/core @capacitor/cli
-   npx cap init
-   npm run build
-   npx cap add android
-   npx cap sync android
-   npx cap open android # Opens in Android Studio
-   ```
-4. **Alternative (React Native)**: If maximum performance is required (e.g., running TFLite models directly on-device at 30fps), a full rewrite in React Native using `react-native-vision-camera` and `react-native-maps` would be the next step.
+    const startFeature = async () => {
+      await VoiceEngine.speak("Tell me what you want to find.");
+      
+      while (isActive && !target) {
+        try {
+          const obj = await VoiceEngine.listen();
+          if (obj) {
+            setTarget(obj);
+            await VoiceEngine.speak(`Looking for ${obj}. Scanning area.`);
+            // Start camera scanning loop here
+            break;
+          }
+        } catch (e) {
+          if (isActive) await VoiceEngine.speak("I didn't catch that. Tell me what you want to find.");
+        }
+      }
+    };
+
+    startFeature();
+
+    return () => {
+      isActive = false;
+      VoiceEngine.stopListening();
+      VoiceEngine.stopSpeaking();
+    };
+  }, []);
+
+  return (
+    <div className="flex-1 relative bg-black">
+      {stream && <video srcObject={stream} autoPlay playsInline muted className="w-full h-full object-cover absolute inset-0" />}
+      <div className="absolute bottom-10 w-full text-center text-white text-2xl font-bold drop-shadow-lg">
+        {target ? `Finding: ${target}` : "Listening..."}
+      </div>
+    </div>
+  );
+}
+```
+
+## 10. Debug Checklist for Voice Issues
+
+1. **Is the browser supported?** Chrome/Edge support Web Speech API fully. Firefox/Safari have limited support.
+2. **Is the site served over HTTPS?** Microphone access (`getUserMedia`) requires a secure context.
+3. **Did the user interact with the page?** TTS requires a user click/tap before it can play audio.
+4. **Is another app using the microphone?** Ensure no other tabs or apps are locking the audio input.
+5. **Check the console for `audio-capture` errors.** This usually means permission was denied.
+6. **Check the Network tab.** Ensure the backend proxy `/api/speak` is returning a valid 200 OK with an audio buffer.
