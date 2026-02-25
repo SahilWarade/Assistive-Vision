@@ -15,7 +15,7 @@ export function useCamera() {
         });
         attachStream(mediaStream);
       } catch (err: unknown) {
-        console.warn("Environment camera failed, falling back to default camera:", err);
+        // Suppress warning to avoid confusing users when falling back
         try {
           // Fallback to any available camera (fixes OverconstrainedError on laptops)
           const fallbackStream = await navigator.mediaDevices.getUserMedia({ 
