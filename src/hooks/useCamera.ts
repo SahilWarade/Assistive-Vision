@@ -4,15 +4,16 @@ export function useCamera() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   useEffect(() => {
     async function setupCamera() {
       try {
         // Try to get the rear camera first
-        const stream = await navigator.mediaDevices.getUserMedia({ 
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: 'environment' } 
         });
-        attachStream(stream);
+        attachStream(mediaStream);
       } catch (err: any) {
         console.warn("Environment camera failed, falling back to default camera:", err);
         try {
@@ -27,9 +28,10 @@ export function useCamera() {
       }
     }
 
-    function attachStream(stream: MediaStream) {
+    function attachStream(mediaStream: MediaStream) {
+      setStream(mediaStream);
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        videoRef.current.srcObject = mediaStream;
         videoRef.current.onloadedmetadata = () => {
           videoRef.current?.play();
           setIsReady(true);
@@ -42,8 +44,8 @@ export function useCamera() {
 
     return () => {
       if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+        const currentStream = videoRef.current.srcObject as MediaStream;
+        currentStream.getTracks().forEach(track => track.stop());
       }
     };
   }, []);
@@ -61,5 +63,5 @@ export function useCamera() {
     return canvas.toDataURL('image/jpeg', 0.8);
   }, [isReady]);
 
-  return { videoRef, isReady, error, captureImage };
+  return { videoRef, isReady, error, captureImage, stream };
 }

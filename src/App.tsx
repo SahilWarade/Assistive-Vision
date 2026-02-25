@@ -3,18 +3,34 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useCamera } from './hooks/useCamera';
 import { useSpeech } from './hooks/useSpeech';
 // In a production app, this would call our custom backend, not Gemini directly.
 import { analyzeScene } from './services/gemini';
-import { Search, Eye, Map, Languages, Mic, Banknote, Navigation, ArrowLeft, Sun, Moon, Shield, HeartPulse, PhoneCall, Save, Edit2 } from 'lucide-react';
+import { Search, Eye, Map, Languages, Mic, Banknote, Navigation, ArrowLeft, Sun, Moon, Shield, HeartPulse, PhoneCall, Save, Edit2, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 
-const LANGUAGES = ['English', 'Hindi', 'Marathi', 'Tamil', 'Telugu', 'Bengali'];
+// Fix for default Leaflet icon missing in React
+import L from 'leaflet';
+// @ts-ignore
+import icon from 'leaflet/dist/images/marker-icon.png';
+// @ts-ignore
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
+const LANGUAGES = ['English', 'Hindi', 'Marathi', 'Tamil', 'Telugu', 'Bengali', 'Gujarati', 'Kannada', 'Malayalam', 'Punjabi', 'Urdu'];
 
 export default function App() {
-  const { videoRef, isReady: cameraReady, error: cameraError, captureImage } = useCamera();
+  const { videoRef, isReady: cameraReady, error: cameraError, captureImage, stream } = useCamera();
   const { speak, listen, stopSpeaking, isListening, isSpeaking } = useSpeech();
   
   const [status, setStatus] = useState('Ready');
@@ -22,6 +38,7 @@ export default function App() {
   const [currentLanguage, setCurrentLanguage] = useState('English');
   const [currentPage, setCurrentPage] = useState('home');
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [langSearch, setLangSearch] = useState('');
   
   // Feature specific states
   const [destination, setDestination] = useState('');
@@ -45,13 +62,6 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [speak]);
 
-  const askHowCanIHelp = useCallback(() => {
-    setTimeout(() => {
-      speak("How can I help you?");
-      setStatus("Waiting for command...");
-    }, 1000);
-  }, [speak]);
-
   // --- Voice AI Guide Logic ---
   const handleVoiceGuide = async () => {
     stopSpeaking();
@@ -65,12 +75,12 @@ export default function App() {
         const dest = lowerCmd.replace('navigate to', '').replace('navigate', '').trim();
         setDestination(dest);
         setCurrentPage('navigate');
-        speak(`Navigating to ${dest || 'unknown destination'}`);
+        speak(`Navigating to ${dest || 'unknown destination'}. Path clear.`);
       } else if (lowerCmd.includes('find')) {
         const obj = lowerCmd.replace('find object', '').replace('find', '').trim();
         setTargetObject(obj);
         setCurrentPage('find');
-        speak(`Looking for ${obj || 'object'}`);
+        handleFindObject(obj);
       } else if (lowerCmd.includes('describe')) {
         setCurrentPage('describe');
         handleDescribeScene();
@@ -110,7 +120,6 @@ export default function App() {
       speak("Service unavailable. Please try again.");
     } finally {
       setProcessing(false);
-      askHowCanIHelp();
     }
   };
 
@@ -131,7 +140,6 @@ export default function App() {
       speak("Service unavailable. Please try again.");
     } finally {
       setProcessing(false);
-      askHowCanIHelp();
     }
   };
 
@@ -151,7 +159,6 @@ export default function App() {
       speak("Service unavailable. Please try again.");
     } finally {
       setProcessing(false);
-      askHowCanIHelp();
     }
   };
 
@@ -218,7 +225,7 @@ export default function App() {
               <AccessibleButton icon={<Eye size={36} />} label="Describe Scene" onActivate={() => { setCurrentPage('describe'); handleDescribeScene(); }} speak={speak} disabled={processing} color={cardClass} />
               <AccessibleButton icon={<Banknote size={36} />} label="Currency" onActivate={() => { setCurrentPage('currency'); handleIdentifyCurrency(); }} speak={speak} disabled={processing} color={cardClass} />
               <AccessibleButton icon={<Languages size={36} />} label="Language" onActivate={changeLanguage} speak={speak} color={cardClass} />
-              <AccessibleButton icon={<Mic size={36} />} label="Voice Guide" onActivate={handleVoiceGuide} speak={speak} color={isDarkMode ? "bg-white text-gray-900" : "bg-gray-900 text-white"} />
+              <AccessibleButton icon={<Mic size={36} />} label="Voice Guide" onActivate={() => { setCurrentPage('voice-guide'); speak("Voice Guide opened. Double tap Start to begin."); }} speak={speak} color={isDarkMode ? "bg-white text-gray-900" : "bg-gray-900 text-white"} />
               <div className="col-span-2">
                 <AccessibleButton icon={<HeartPulse size={36} />} label="Emergency Info" onActivate={() => { setCurrentPage('emergency'); speak("Emergency information opened."); }} speak={speak} color="bg-red-600 text-white border-red-700" />
               </div>
@@ -238,14 +245,22 @@ export default function App() {
                 className={`w-full p-4 text-xl border rounded-xl outline-none ${inputClass}`}
               />
             </div>
-            <div className={`flex-1 flex items-center justify-center relative ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <div className="text-gray-400 flex flex-col items-center">
-                <Map size={64} className="mb-4 opacity-50" />
-                <p className="font-medium">Google Maps Interface</p>
-              </div>
-              {/* Simulated Camera Preview Overlay */}
-              <div className="absolute bottom-4 right-4 w-32 h-48 bg-gray-900 rounded-xl border-2 border-white shadow-lg flex items-center justify-center overflow-hidden">
-                <p className="text-white text-xs text-center px-2">Live Camera<br/>(Obstacle Detection)</p>
+            <div className={`flex-1 flex items-center justify-center relative ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} z-0`}>
+              <MapContainer center={[20.5937, 78.9629]} zoom={5} style={{ height: '100%', width: '100%', zIndex: 0 }}>
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {destination && (
+                  <Marker position={[20.5937, 78.9629]}>
+                    <Popup>Navigating to: {destination}</Popup>
+                  </Marker>
+                )}
+              </MapContainer>
+              {/* Camera Preview Overlay */}
+              <div className="absolute bottom-4 right-4 w-32 h-48 bg-gray-900 rounded-xl border-2 border-white shadow-lg flex items-center justify-center overflow-hidden z-10">
+                {stream ? <VideoPreview stream={stream} className="w-full h-full" /> : <p className="text-white text-xs text-center px-2">Camera Off</p>}
+                <div className="absolute bottom-0 w-full bg-black/50 text-white text-[10px] text-center py-1">Obstacle Detection</div>
               </div>
             </div>
             <div className={`p-6 border-t ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
@@ -269,8 +284,8 @@ export default function App() {
                 <Mic size={24} />
               </button>
             </div>
-            <div className="flex-1 bg-gray-900 flex items-center justify-center relative">
-               <p className="text-white text-sm">Full Camera Preview</p>
+            <div className="flex-1 bg-gray-900 flex items-center justify-center relative overflow-hidden">
+               {stream ? <VideoPreview stream={stream} className="w-full h-full absolute inset-0" /> : <p className="text-white text-sm">Camera Off</p>}
             </div>
             <div className={`p-6 border-t min-h-[150px] flex flex-col justify-center ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
               <p className={`text-xl font-medium text-center mb-4 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{status}</p>
@@ -282,11 +297,19 @@ export default function App() {
         {(currentPage === 'describe' || currentPage === 'currency') && (
           <motion.div key="camera-feature" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col">
             {renderHeader(currentPage === 'describe' ? 'Describe Scene' : 'Identify Currency')}
-            <div className="flex-1 bg-gray-900 flex items-center justify-center">
-               <p className="text-white text-sm">Live Camera Preview</p>
+            <div className="flex-1 bg-gray-900 flex items-center justify-center relative overflow-hidden">
+               {stream ? <VideoPreview stream={stream} className="w-full h-full absolute inset-0" /> : <p className="text-white text-sm">Camera Off</p>}
             </div>
-            <div className={`p-8 border-t min-h-[200px] flex items-center justify-center ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
-              <p className={`text-2xl font-medium text-center leading-relaxed ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{status}</p>
+            <div className={`p-6 border-t min-h-[200px] flex flex-col items-center justify-center gap-6 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+              <p className={`text-xl font-medium text-center leading-relaxed ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{status}</p>
+              <AccessibleButton 
+                icon={currentPage === 'describe' ? <Eye size={24} /> : <Banknote size={24} />} 
+                label="Analyze Again" 
+                onActivate={() => currentPage === 'describe' ? handleDescribeScene() : handleIdentifyCurrency()} 
+                speak={speak} 
+                disabled={processing} 
+                color={isDarkMode ? "bg-white text-gray-900" : "bg-gray-900 text-white"} 
+              />
             </div>
           </motion.div>
         )}
@@ -294,8 +317,17 @@ export default function App() {
         {currentPage === 'language' && (
           <motion.div key="language" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col">
             {renderHeader('Change Language')}
+            <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+              <input 
+                type="text" 
+                value={langSearch} 
+                onChange={(e) => setLangSearch(e.target.value)}
+                placeholder="Search language..." 
+                className={`w-full p-4 text-xl border rounded-xl outline-none ${inputClass}`}
+              />
+            </div>
             <div className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto">
-              {LANGUAGES.map(lang => (
+              {LANGUAGES.filter(l => l.toLowerCase().includes(langSearch.toLowerCase())).map(lang => (
                 <AccessibleButton 
                   key={lang}
                   icon={<Languages size={24} />} 
@@ -305,6 +337,26 @@ export default function App() {
                   color={currentLanguage === lang ? (isDarkMode ? "bg-white text-gray-900" : "bg-gray-900 text-white") : cardClass}
                 />
               ))}
+            </div>
+          </motion.div>
+        )}
+
+        {currentPage === 'voice-guide' && (
+          <motion.div key="voice-guide" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col">
+            {renderHeader('Voice AI Guide')}
+            <div className="flex-1 flex flex-col items-center justify-center p-6 gap-12">
+              <div className={`w-48 h-48 rounded-full flex items-center justify-center transition-colors duration-300 ${isListening ? 'bg-red-500 shadow-[0_0_30px_rgba(239,68,68,0.6)]' : cardClass}`}>
+                <Mic size={80} className={isListening ? 'text-white' : ''} />
+              </div>
+              <p className={`text-2xl font-medium text-center ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{status}</p>
+              <div className="flex gap-4 w-full max-w-md">
+                <div className="flex-1">
+                  <AccessibleButton icon={<Mic size={28}/>} label="Start" onActivate={handleVoiceGuide} speak={speak} color="bg-green-600 text-white border-green-700" />
+                </div>
+                <div className="flex-1">
+                  <AccessibleButton icon={<Square size={28}/>} label="Stop" onActivate={() => { stopSpeaking(); setStatus("Stopped listening."); }} speak={speak} color="bg-red-600 text-white border-red-700" />
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -448,4 +500,14 @@ function AccessibleButton({ icon, label, onActivate, speak, disabled, color = "b
       <span className="text-lg font-semibold tracking-tight">{label}</span>
     </motion.button>
   );
+}
+
+function VideoPreview({ stream, className }: { stream: MediaStream | null, className?: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    if (ref.current && stream) {
+      ref.current.srcObject = stream;
+    }
+  }, [stream]);
+  return <video ref={ref} autoPlay playsInline muted className={`object-cover ${className}`} />;
 }
