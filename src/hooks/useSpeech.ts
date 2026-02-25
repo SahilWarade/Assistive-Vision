@@ -2,12 +2,27 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 
 export const LANGUAGE_CONFIG = {
   'English': { code: 'en-IN', voice: 'meera', confirmText: 'I will now speak in English.' },
-  'Hindi': { code: 'hi-IN', voice: 'meera', confirmText: 'अब मैं हिंदी में बात करूँगा।' },
-  'Marathi': { code: 'mr-IN', voice: 'meera', confirmText: 'आता मी मराठीत बोलेन.' },
-  'Tamil': { code: 'ta-IN', voice: 'meera', confirmText: 'இப்போது நான் தமிழில் பேசுவேன்.' },
-  'Telugu': { code: 'te-IN', voice: 'meera', confirmText: 'ఇప్పుడు నేను తెలుగులో మాట్లాడతాను.' },
-  'Bengali': { code: 'bn-IN', voice: 'meera', confirmText: 'এখন আমি বাংলায় কথা বলব।' }
+  'Hindi': { code: 'hi-IN', voice: 'meera', confirmText: 'आपकी भाषा पसंद सुरक्षित कर दी गई है।' },
+  'Marathi': { code: 'mr-IN', voice: 'meera', confirmText: 'तुमची भाषा निवड जतन केली आहे.' },
+  'Tamil': { code: 'ta-IN', voice: 'meera', confirmText: 'உங்கள் மொழி விருப்பம் சேமிக்கப்பட்டது.' },
+  'Telugu': { code: 'te-IN', voice: 'meera', confirmText: 'మీ భాష ఎంపిక సేవ్ చేయబడింది.' },
+  'Bengali': { code: 'bn-IN', voice: 'meera', confirmText: 'আপনার ভাষা পছন্দ সংরক্ষণ করা হয়েছে।' }
 };
+
+export function parseSpokenNumber(text: string): number | null {
+  const lower = text.toLowerCase().trim();
+  if (lower.match(/\b(1|one|ek|एक|first)\b/)) return 1;
+  if (lower.match(/\b(2|two|do|दो|second)\b/)) return 2;
+  if (lower.match(/\b(3|three|teen|तीन|third)\b/)) return 3;
+  if (lower.match(/\b(4|four|char|चार|fourth)\b/)) return 4;
+  if (lower.match(/\b(5|five|panch|पांच|fifth)\b/)) return 5;
+  if (lower.match(/\b(0|zero|shunya|शून्य|cancel)\b/)) return 0;
+  
+  const match = lower.match(/\d/);
+  if (match) return parseInt(match[0], 10);
+  
+  return null;
+}
 
 export function useSpeech() {
   const [isListening, setIsListening] = useState(false);
@@ -89,6 +104,11 @@ export function useSpeech() {
     });
   }, [speak]);
 
+  const speakAndListen = useCallback(async (text: string): Promise<string> => {
+    await speak(text);
+    return await listen();
+  }, [speak, listen]);
+
   const stopSpeaking = useCallback(() => {
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
@@ -101,7 +121,7 @@ export function useSpeech() {
     setIsListening(false);
   }, []);
 
-  return { speak, listen, stopSpeaking, stopListening, isListening, isSpeaking, transcript };
+  return { speak, listen, speakAndListen, stopSpeaking, stopListening, isListening, isSpeaking, transcript };
 }
 
 export function useAccessibleButton(label: string, onActivate: () => void, speak: (text: string) => void) {

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useCamera } from './hooks/useCamera';
-import { useSpeech, useAccessibleButton } from './hooks/useSpeech';
+import { useSpeech, useAccessibleButton, parseSpokenNumber, LANGUAGE_CONFIG } from './hooks/useSpeech';
 // In a production app, this would call our custom backend, not Gemini directly.
 import { analyzeScene } from './services/gemini';
 import { Search, Eye, Map, Languages, Mic, Banknote, Navigation, ArrowLeft, Sun, Moon, Shield, HeartPulse, PhoneCall, Save, Edit2, Square } from 'lucide-react';
@@ -15,7 +15,7 @@ const LANGUAGES = ['English', 'Hindi', 'Marathi', 'Tamil', 'Telugu', 'Bengali', 
 
 export default function App() {
   const { videoRef, isReady: cameraReady, error: cameraError, captureImage, stream } = useCamera();
-  const { speak, listen, stopSpeaking, stopListening, isListening, isSpeaking } = useSpeech();
+  const { speak, listen, speakAndListen, stopSpeaking, stopListening, isListening, isSpeaking } = useSpeech();
   
   const [status, setStatus] = useState('Ready');
   const [processing, setProcessing] = useState(false);
@@ -83,26 +83,42 @@ export default function App() {
           }
         }
       } else if (currentPage === 'language') {
-        await speak("Do you want to change language? Say yes or no.");
         try {
-          const ans = await listen();
-          if (ans.toLowerCase().includes('yes')) {
-            await speak("Say 1 for Hindi. Say 2 for Marathi. Say 3 for Tamil. Say 4 for Telugu. Say 5 for Bengali. Say 0 to cancel.");
-            const num = await listen();
-            let newLang = '';
-            if (num.includes('1')) newLang = 'Hindi';
-            else if (num.includes('2')) newLang = 'Marathi';
-            else if (num.includes('3')) newLang = 'Tamil';
-            else if (num.includes('4')) newLang = 'Telugu';
-            else if (num.includes('5')) newLang = 'Bengali';
-            
-            if (newLang) {
-              setCurrentLanguage(newLang);
-              localStorage.setItem('appLanguage', newLang);
-              await speak(`Language changed to ${newLang}`);
-            } else {
-              await speak("Cancelled.");
+          const ans = await speakAndListen("Do you want to change language? Say yes or no.");
+          if (ans.toLowerCase().includes('yes') || ans.toLowerCase().includes('haan') || ans.toLowerCase().includes('हाँ')) {
+            let validChoice = false;
+            while (isActive && !validChoice) {
+              try {
+                const numStr = await speakAndListen("Say 1 for Hindi. Say 2 for Marathi. Say 3 for Tamil. Say 4 for Telugu. Say 5 for Bengali. Say 0 to cancel.");
+                const num = parseSpokenNumber(numStr);
+                
+                let newLang = '';
+                if (num === 1) newLang = 'Hindi';
+                else if (num === 2) newLang = 'Marathi';
+                else if (num === 3) newLang = 'Tamil';
+                else if (num === 4) newLang = 'Telugu';
+                else if (num === 5) newLang = 'Bengali';
+                else if (num === 0) {
+                  await speak("Cancelled.");
+                  validChoice = true;
+                  break;
+                }
+                
+                if (newLang) {
+                  setCurrentLanguage(newLang);
+                  localStorage.setItem('appLanguage', newLang);
+                  const confirmText = LANGUAGE_CONFIG[newLang as keyof typeof LANGUAGE_CONFIG]?.confirmText || `Language changed to ${newLang}`;
+                  await speak(confirmText);
+                  validChoice = true;
+                } else {
+                  await speak("Invalid choice. Please say a number between 0 and 5.");
+                }
+              } catch (e) {
+                if (isActive) await speak("Please repeat.");
+              }
             }
+          } else {
+            await speak("Cancelled.");
           }
         } catch (e) {
           if (isActive) await speak("Please repeat.");
@@ -203,7 +219,14 @@ export default function App() {
           </button>
         )}
       </div>
-      <div className="w-2/4 flex flex-col items-center justify-center text-center">
+      <div className="w-2/4 flex items-center justify-center gap-2 text-center">
+        {!showBack && (
+          <img 
+            src="/icon.svg" 
+            alt="App Logo" 
+            className="max-h-[36px] w-auto object-contain p-1" 
+          />
+        )}
         <h1 className="text-lg font-bold tracking-tight whitespace-nowrap">{title}</h1>
       </div>
       <div className="w-1/4 flex justify-end items-center gap-3">

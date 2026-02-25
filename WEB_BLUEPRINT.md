@@ -316,3 +316,28 @@ export function FindObjectPage() {
 4. **Is another app using the microphone?** Ensure no other tabs or apps are locking the audio input.
 5. **Check the console for `audio-capture` errors.** This usually means permission was denied.
 6. **Check the Network tab.** Ensure the backend proxy `/api/speak` is returning a valid 200 OK with an audio buffer.
+
+## 11. Icon Sizing Guidelines
+
+To ensure the app icon looks clean, professional, and fully visible on all devices, follow these guidelines:
+
+### SVG Source (`/public/icon.svg`)
+- **ViewBox**: Use a square viewBox (e.g., `0 0 36 36`).
+- **Padding**: Ensure the inner graphic is scaled to about 70-80% of the canvas. For a 36x36 canvas, the graphic should fit within a 24x24 area, leaving a 6px margin on all sides.
+- **Background**: Include a solid background rect (e.g., `<rect width="36" height="36" fill="#ffffff" />`) to match the app theme.
+
+### Header Logo
+- **Size**: 32px–40px height.
+- **CSS**: `max-height: 36px; width: auto; object-fit: contain; padding: 4px;`
+- **Alignment**: Vertically center inside the header using flexbox (`items-center`).
+
+### Favicon (`/public/favicon.png`)
+- **Size**: 32x32 pixels.
+- **Format**: PNG for maximum compatibility.
+- **Content**: Centered inside the square canvas, not touching the edges.
+
+### PWA Icons (`/public/manifest.json`)
+- **Sizes**: 192x192 and 512x512 pixels.
+- **Format**: PNG.
+- **Padding**: 10–15% margin inside the canvas.
+- **Purpose**: Set to `"any maskable"` to allow the OS to apply its own masking (e.g., squircle on Android, rounded rectangle on iOS).
