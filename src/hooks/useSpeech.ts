@@ -24,14 +24,44 @@ export function parseSpokenNumber(text: string): number | null {
   return null;
 }
 
+export type VoiceState = 'IDLE' | 'SPEAKING' | 'LISTENING' | 'PROCESSING';
+
 export function useSpeech() {
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceState, setVoiceState] = useState<VoiceState>('IDLE');
   const [transcript, setTranscript] = useState('');
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const stateRef = useRef<VoiceState>('IDLE');
+
+  const updateState = useCallback((newState: VoiceState) => {
+    stateRef.current = newState;
+    setVoiceState(newState);
+  }, []);
+
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null;
+      recognitionRef.current.onerror = null;
+      recognitionRef.current.onresult = null;
+      try {
+        recognitionRef.current.abort();
+      } catch(e) {}
+      recognitionRef.current = null;
+    }
+    if (stateRef.current === 'LISTENING') {
+      updateState('IDLE');
+    }
+  }, [updateState]);
+
+  const stopSpeaking = useCallback(() => {
+    window.speechSynthesis.cancel();
+    if (stateRef.current === 'SPEAKING') {
+      updateState('IDLE');
+    }
+  }, [updateState]);
 
   const speak = useCallback(async (text: string): Promise<void> => {
-    setIsSpeaking(true);
+    stopListening();
+    updateState('SPEAKING');
     window.speechSynthesis.cancel();
     
     return new Promise((resolve) => {
@@ -41,24 +71,28 @@ export function useSpeech() {
       utterance.rate = 0.9;
       
       utterance.onend = () => {
-        setIsSpeaking(false);
+        if (stateRef.current === 'SPEAKING') updateState('IDLE');
         resolve();
       };
       utterance.onerror = () => {
-        setIsSpeaking(false);
+        if (stateRef.current === 'SPEAKING') updateState('IDLE');
         resolve();
       };
       
       window.speechSynthesis.speak(utterance);
     });
-  }, []);
+  }, [stopListening, updateState]);
 
   const listen = useCallback((): Promise<string> => {
     return new Promise(async (resolve, reject) => {
+      stopListening();
+      updateState('LISTENING');
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach(track => track.stop());
       } catch (err) {
+        updateState('IDLE');
         speak("Microphone permission required.");
         reject('audio-capture');
         return;
@@ -67,12 +101,9 @@ export function useSpeech() {
       // @ts-ignore
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
+        updateState('IDLE');
         reject('Speech recognition not supported');
         return;
-      }
-
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
       }
 
       const recognition = new SpeechRecognition();
@@ -83,45 +114,88 @@ export function useSpeech() {
       const currentLang = localStorage.getItem('appLanguage') || 'English';
       recognition.lang = LANGUAGE_CONFIG[currentLang as keyof typeof LANGUAGE_CONFIG]?.code || 'en-IN';
 
-      recognition.onstart = () => setIsListening(true);
+      let timeoutId: ReturnType<typeof setTimeout>;
+
+      recognition.onstart = () => {
+        if (stateRef.current !== 'LISTENING') {
+          recognition.abort();
+          return;
+        }
+        timeoutId = setTimeout(() => {
+          if (stateRef.current === 'LISTENING') {
+            recognition.abort();
+            reject('no-speech');
+          }
+        }, 5000);
+      };
       
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        clearTimeout(timeoutId);
+        if (stateRef.current !== 'LISTENING') return;
+        
         const result = event.results[0][0].transcript;
         setTranscript(result);
+        updateState('PROCESSING');
         resolve(result);
       };
 
-      recognition.onerror = (event: any) => {
-        setIsListening(false);
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        clearTimeout(timeoutId);
+        if (stateRef.current !== 'LISTENING') return;
+        updateState('IDLE');
         reject(event.error);
       };
 
       recognition.onend = () => {
-        setIsListening(false);
+        clearTimeout(timeoutId);
+        if (stateRef.current === 'LISTENING') {
+          updateState('IDLE');
+          reject('no-speech');
+        }
       };
 
-      recognition.start();
+      try {
+        recognition.start();
+      } catch (e) {
+        updateState('IDLE');
+        reject('start-failed');
+      }
     });
-  }, [speak]);
+  }, [speak, stopListening, updateState]);
 
-  const speakAndListen = useCallback(async (text: string): Promise<string> => {
-    await speak(text);
-    return await listen();
+  const speakAndListen = useCallback(async (text: string, retries = 2): Promise<string> => {
+    for (let i = 0; i <= retries; i++) {
+      await speak(text);
+      try {
+        return await listen();
+      } catch (e) {
+        if (e === 'no-speech' || e === 'network' || e === 'not-allowed') {
+          if (i < retries) continue;
+        }
+        throw e;
+      }
+    }
+    throw new Error('Max retries reached');
   }, [speak, listen]);
 
-  const stopSpeaking = useCallback(() => {
-    window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-  }, []);
+  useEffect(() => {
+    return () => {
+      stopListening();
+      stopSpeaking();
+    };
+  }, [stopListening, stopSpeaking]);
 
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-    setIsListening(false);
-  }, []);
-
-  return { speak, listen, speakAndListen, stopSpeaking, stopListening, isListening, isSpeaking, transcript };
+  return { 
+    speak, 
+    listen, 
+    speakAndListen, 
+    stopSpeaking, 
+    stopListening, 
+    isListening: voiceState === 'LISTENING', 
+    isSpeaking: voiceState === 'SPEAKING', 
+    voiceState,
+    transcript 
+  };
 }
 
 export function useAccessibleButton(label: string, onActivate: () => void, speak: (text: string) => void) {

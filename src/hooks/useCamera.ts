@@ -14,7 +14,7 @@ export function useCamera() {
           video: { facingMode: 'environment' } 
         });
         attachStream(mediaStream);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.warn("Environment camera failed, falling back to default camera:", err);
         try {
           // Fallback to any available camera (fixes OverconstrainedError on laptops)
@@ -22,8 +22,9 @@ export function useCamera() {
             video: true 
           });
           attachStream(fallbackStream);
-        } catch (fallbackErr: any) {
-          setError(fallbackErr.message || 'Failed to access camera');
+        } catch (fallbackErr: unknown) {
+          const errorMsg = fallbackErr instanceof Error ? fallbackErr.message : 'Failed to access camera';
+          setError(errorMsg);
         }
       }
     }

@@ -8,7 +8,7 @@ import { useCamera } from './hooks/useCamera';
 import { useSpeech, useAccessibleButton, parseSpokenNumber, LANGUAGE_CONFIG } from './hooks/useSpeech';
 // In a production app, this would call our custom backend, not Gemini directly.
 import { analyzeScene } from './services/gemini';
-import { Search, Eye, Map, Languages, Mic, Banknote, Navigation, ArrowLeft, Sun, Moon, Shield, HeartPulse, PhoneCall, Save, Edit2, Square } from 'lucide-react';
+import { Search, Eye, Map, Languages, Mic, Banknote, ArrowLeft, Shield, HeartPulse, PhoneCall, Save, Edit2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const LANGUAGES = ['English', 'Hindi', 'Marathi', 'Tamil', 'Telugu', 'Bengali', 'Gujarati', 'Kannada', 'Malayalam', 'Punjabi', 'Urdu'];
@@ -21,7 +21,7 @@ export default function App() {
   const [processing, setProcessing] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState(localStorage.getItem('appLanguage') || 'English');
   const [currentPage, setCurrentPage] = useState('home');
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const isDarkMode = false; // Add toggle later if needed
   
   // Feature specific states
   const [destination, setDestination] = useState('');
@@ -52,34 +52,32 @@ export default function App() {
     const runPageLogic = async () => {
       if (currentPage === 'navigate') {
         setDestination('');
-        await speak("Where do you want to go?");
-        while (isActive) {
-          try {
-            const dest = await listen();
-            if (dest) {
-              setDestination(dest);
-              await speak(`Navigating to ${dest}. Path clear. Walk forward.`);
-              setStatus(`Navigating to ${dest}`);
-              break;
-            }
-          } catch (e) {
-            if (isActive) await speak("Please tell me where you want to go.");
+        try {
+          const dest = await speakAndListen("Where do you want to go?", 2);
+          if (isActive && dest) {
+            setDestination(dest);
+            await speak(`Navigating to ${dest}. Path clear. Walk forward.`);
+            setStatus(`Navigating to ${dest}`);
+          }
+        } catch (e) {
+          if (isActive) {
+            await speak("No destination detected. Returning to home.");
+            setCurrentPage('home');
           }
         }
       } else if (currentPage === 'find') {
         setTargetObject('');
-        await speak("What are you looking for?");
-        while (isActive) {
-          try {
-            const obj = await listen();
-            if (obj) {
-              setTargetObject(obj);
-              await speak(`Looking for ${obj}. Scanning area.`);
-              handleFindObject(obj);
-              break;
-            }
-          } catch (e) {
-            if (isActive) await speak("Please tell me what you are looking for.");
+        try {
+          const obj = await speakAndListen("What are you looking for?", 2);
+          if (isActive && obj) {
+            setTargetObject(obj);
+            await speak(`Looking for ${obj}. Scanning area.`);
+            handleFindObject(obj);
+          }
+        } catch (e) {
+          if (isActive) {
+            await speak("No object detected. Returning to home.");
+            setCurrentPage('home');
           }
         }
       } else if (currentPage === 'language') {
@@ -87,7 +85,8 @@ export default function App() {
           const ans = await speakAndListen("Do you want to change language? Say yes or no.");
           if (ans.toLowerCase().includes('yes') || ans.toLowerCase().includes('haan') || ans.toLowerCase().includes('हाँ')) {
             let validChoice = false;
-            while (isActive && !validChoice) {
+            let retries = 0;
+            while (isActive && !validChoice && retries < 3) {
               try {
                 const numStr = await speakAndListen("Say 1 for Hindi. Say 2 for Marathi. Say 3 for Tamil. Say 4 for Telugu. Say 5 for Bengali. Say 0 to cancel.");
                 const num = parseSpokenNumber(numStr);
@@ -111,11 +110,16 @@ export default function App() {
                   await speak(confirmText);
                   validChoice = true;
                 } else {
-                  await speak("Invalid choice. Please say a number between 0 and 5.");
+                  retries++;
+                  if (retries < 3) await speak("Invalid choice. Please say a number between 0 and 5.");
                 }
               } catch (e) {
-                if (isActive) await speak("Please repeat.");
+                retries++;
+                if (isActive && retries < 3) await speak("Please repeat.");
               }
+            }
+            if (!validChoice && isActive) {
+              await speak("Too many invalid attempts. Returning to home.");
             }
           } else {
             await speak("Cancelled.");
@@ -435,7 +439,16 @@ export default function App() {
   );
 }
 
-function AccessibleButton({ icon, label, onActivate, speak, disabled, color = "bg-white text-gray-900" }: any) {
+interface AccessibleButtonProps {
+  icon: React.ReactNode;
+  label: string;
+  onActivate: () => void;
+  speak: (text: string) => void;
+  disabled?: boolean;
+  color?: string;
+}
+
+function AccessibleButton({ icon, label, onActivate, speak, disabled, color = "bg-white text-gray-900" }: AccessibleButtonProps) {
   const handleTap = useAccessibleButton(label, onActivate, speak);
 
   return (

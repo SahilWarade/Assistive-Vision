@@ -341,3 +341,9 @@ To ensure the app icon looks clean, professional, and fully visible on all devic
 - **Format**: PNG.
 - **Padding**: 10–15% margin inside the canvas.
 - **Purpose**: Set to `"any maskable"` to allow the OS to apply its own masking (e.g., squircle on Android, rounded rectangle on iOS).
+
+## 12. Why These Bugs Appeared Now
+
+1. **Infinite Voice Loop**: The previous implementation used a simple `while(isActive)` loop that immediately restarted listening if an error (like `no-speech` timeout) occurred. Because `speak()` and `listen()` were not properly synchronized with a strict state machine, the system would often start listening while it was still speaking, or immediately after a timeout, creating an infinite loop of "Tell me what you are looking for." The new `VoiceState` machine (`IDLE`, `SPEAKING`, `LISTENING`, `PROCESSING`) and the `speakAndListen` utility ensure strict sequential execution and limit retries.
+2. **Vision Service Error**: The frontend was trying to call the Gemini API directly using the `@google/genai` SDK. This often fails in production due to CORS restrictions or missing environment variables on the client side. By moving the Gemini API call to a backend Express proxy (`/api/vision`), we securely handle the API key (`process.env.GEMINI_API_KEY`), bypass CORS issues, and can implement robust retry and timeout logic.
+3. **Black Box Flash**: The default HTML body has no background color, and React takes a few milliseconds to mount and render the UI. During this gap, the browser renders a black screen (especially in dark mode or standalone PWA mode). By explicitly setting `html, body { background-color: #ffffff; }` in CSS and adding a lightweight CSS-only splash screen in `index.html`, we ensure a smooth, white transition while React loads.
