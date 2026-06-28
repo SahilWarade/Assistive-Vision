@@ -952,7 +952,7 @@ export default function App() {
                     type="tel"
                     value={newNumber}
                     onChange={e => setNewNumber(e.target.value)}
-                    placeholder="+91..."
+                    placeholder="1234567890"
                     className={`flex-1 p-3 rounded-xl border text-sm ${inputClass}`}
                   />
                   <button
@@ -1070,7 +1070,7 @@ export default function App() {
                     {isEditingEmergency ? (
                       <input 
                         type="tel" 
-                        placeholder="e.g. +91 98765 43210" 
+                        placeholder="1234567890"
                         value={emergencyData.contactPhone} 
                         onChange={e => {
                           const val = e.target.value.replace(/[^\d\s\-\+]/g, '');
