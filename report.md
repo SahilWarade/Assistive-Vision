@@ -1,12 +1,12 @@
-# EchoSight - Project Report
+# Assistive Vision - Project Report
 
 ## 1. Project Overview
-**EchoSight** is an AI-powered, voice-first accessibility application meticulously designed to empower visually impaired individuals. It serves as an intelligent companion that helps users navigate their environment, understand physical surroundings, and stay securely connected with their loved ones. By combining state-of-the-art Generative AI Vision with regional language nuances, EchoSight provides an inclusive, real-time auditory interface.
+**Assistive Vision** is an AI-powered, voice-first accessibility application meticulously designed to empower visually impaired individuals. It serves as an intelligent companion that helps users navigate their environment, understand physical surroundings, and stay securely connected with their loved ones. By combining state-of-the-art Generative AI Vision with regional language nuances, Assistive Vision provides an inclusive, real-time auditory interface.
 
 ## 2. Problem Statement & Mission
 **Mission:** To empower independence and safety for visually impaired users using intelligent, accessible technology.
 
-Millions of visually impaired individuals face daily challenges in navigating new environments, identifying objects/currency, and communicating their real-time safety status to guardians. Existing solutions are often limited to English, lack context-aware AI vision, or involve complex physical hardware. EchoSight solves this by turning any standard smartphone into a highly capable, localized, and context-aware auditory assistant.
+Millions of visually impaired individuals face daily challenges in navigating new environments, identifying objects/currency, and communicating their real-time safety status to guardians. Existing solutions are often limited to English, lack context-aware AI vision, or involve complex physical hardware. Assistive Vision solves this by turning any standard smartphone into a highly capable, localized, and context-aware auditory assistant.
 
 ## 3. Core Features & Scope
 

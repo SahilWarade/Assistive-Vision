@@ -1,6 +1,6 @@
 {
-  "name": "EchoSight",
-  "short_name": "EchoSight",
+  "name": "Assistive Vision",
+  "short_name": "Assistive Vision",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -626,7 +626,7 @@ export default function App() {
           />
         )}
         <h1 className={`${showBack ? 'text-xl' : 'text-3xl'} font-extrabold tracking-tight whitespace-nowrap drop-shadow-sm`} style={{ fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 900 }}>
-          {title.replace('EchoSight', 'Echo-Sight')}
+          {title}
         </h1>
       </div>
       <div className="w-1/4 flex justify-end items-center gap-3">
@@ -675,7 +675,7 @@ export default function App() {
       <div className={`min-h-screen flex items-center justify-center transition-colors duration-300 ${bgClass}`}>
         <div className="flex flex-col items-center">
           <img src="/eye-padded.png" alt="Loading" className="w-24 h-24 mb-4 drop-shadow-lg object-contain animate-pulse" />
-          <p className="text-xl font-bold" style={{ fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 800 }}>Echo-Sight</p>
+          <p className="text-xl font-bold" style={{ fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 800 }}>Assistive Vision</p>
           <div className="mt-4 w-6 h-6 border-4 border-current border-t-transparent rounded-full animate-spin opacity-50"></div>
         </div>
       </div>
@@ -711,7 +711,7 @@ export default function App() {
       <AnimatePresence mode="wait">
         {currentPage === 'home' && (
           <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col">
-            {renderHeader(t('app_title', currentLanguage) || 'EchoSight', false)}
+            {renderHeader(t('app_title', currentLanguage) || 'Assistive Vision', false)}
 
             {(status !== t('status_ready', currentLanguage) || cameraError || cameraRequesting) && (
               <div className="flex-none px-4 pt-4 flex flex-col items-center justify-center">

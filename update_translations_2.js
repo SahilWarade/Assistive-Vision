@@ -5,9 +5,9 @@ const txt = fs.readFileSync('src/translations.ts', 'utf-8');
 const newKeys = {
     btn_about: { English: "About Us", Hindi: "हमारे बारे बारे में", Urdu: "ہمارے بارے میں" },
     btn_how_to_use: { English: "How To Use", Hindi: "कैसे उपयोग करें", Urdu: "استعمال کا طریقہ" },
-    page_about_title: { English: "About EchoSight", Hindi: "इकोसाइट के बारे में", Urdu: "ایکو سائٹ کے بارے میں" },
+    page_about_title: { English: "About Assistive Vision", Hindi: "असिस्टिव विजन के बारे में", Urdu: "اسسٹو ویژن کے بارے میں" },
     page_about_overview: { English: "Overview", Hindi: "अवलोकन", Urdu: "جائزہ" },
-    page_about_overview_text: { English: "EchoSight is an AI-powered accessibility application designed to assist visually impaired individuals in navigating and understanding their surroundings.", Hindi: "इकोसाइट एक एआई-संचालित एप्लिकेशन है जो दृष्टिबाधित व्यक्तियों को नेविगेट करने और उनके परिवेश को समझने में सहायता करता है।", Urdu: "ایکو سائٹ ایک اے آئی سے چلنے والی ایپلی کیشن ہے جو نابینا افراد کو نیویگیٹ کرنے اور ان کے ارد گرد کو سمجھنے میں مدد کرتی ہے۔" },
+    page_about_overview_text: { English: "Assistive Vision is an AI-powered accessibility application designed to assist visually impaired individuals in navigating and understanding their surroundings.", Hindi: "असिस्टिव विजन एक एआई-संचालित एप्लिकेशन है जो दृष्टिबाधित व्यक्तियों को नेविगेट करने और उनके परिवेश को समझने में सहायता करता है।", Urdu: "اسسٹو ویژن ایک اے آئی سے چلنے والی ایپلی کیشن ہے جو نابینا افراد کو نیویگیٹ کرنے اور ان کے ارد گرد کو سمجھنے میں مدد کرتی ہے۔" },
     page_about_features: { English: "Features", Hindi: "विशेषताएं", Urdu: "خصوصیات" },
     page_about_feature_1: { English: "Scene Description using AI", Hindi: "एआई का उपयोग करके दृश्य विवरण", Urdu: "اے آئی کا استعمال کرتے ہوئے منظر کی تفصیل" },
     page_about_feature_2: { English: "Currency Detection", Hindi: "मुद्रा पहचान", Urdu: "کرنسی کی شناخت" },
