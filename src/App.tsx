@@ -421,9 +421,9 @@ export default function App() {
     if (!image) return;
 
     if (currentPage === 'describe') {
-      await analyzeProvidedImage(image, `Describe the surroundings concisely for a blind person. Mention any immediate obstacles or people. Keep it under 3 sentences. Reply ONLY in the ${currentLanguage} language.`);
+      await analyzeProvidedImage(image, `Describe the surroundings concisely for a blind person. Mention any immediate obstacles or people. CRITICAL SAFETY WARNING: If there is any active threat, danger, or hazard in the scene (such as a person attacking, someone holding a weapon, sharp or dangerous objects, or a threatening animal), you MUST immediately start your response with a clear, urgent warning (e.g. 'WARNING: ...') detailing the threat. Keep it under 3 sentences. Reply ONLY in the ${currentLanguage} language.`);
     } else if (currentPage === 'currency') {
-      await analyzeProvidedImage(image, `Identify the Indian currency note in this image. State only the denomination. If unclear, say 'Currency not clear. Please hold steady.'. Reply ONLY in the ${currentLanguage} language.`);
+      await analyzeProvidedImage(image, `Analyze the Indian currency note in this image. 1. If a valid currency note is detected, state its denomination clearly. 2. If the currency note appears suspicious, counterfeit, or fake, explicitly warn the user that it looks fake. 3. If no currency is shown, or nothing is visible in the frame, state clearly that no currency or nothing was detected. Reply ONLY in the ${currentLanguage} language.`);
     } else if (currentPage === 'find') {
       const objectLabel = targetObject || 'target object';
       await analyzeProvidedImage(image, `Find the ${objectLabel} in this image. Tell me where it is (left, right, center) and approximate distance. Provide hand guidance like 'Move hand right'. If not found, say so. Keep it very short. Reply ONLY in the ${currentLanguage} language.`);
@@ -444,7 +444,7 @@ export default function App() {
     try {
       const image = captureImage();
       if (image) {
-        const response = await analyzeScene(image, `Describe the surroundings concisely for a blind person. Mention any immediate obstacles or people. Keep it under 3 sentences. Reply ONLY in the ${currentLanguage} language.`);
+        const response = await analyzeScene(image, `Describe the surroundings concisely for a blind person. Mention any immediate obstacles or people. CRITICAL SAFETY WARNING: If there is any active threat, danger, or hazard in the scene (such as a person attacking, someone holding a weapon, sharp or dangerous objects, or a threatening animal), you MUST immediately start your response with a clear, urgent warning (e.g. 'WARNING: ...') detailing the threat. Keep it under 3 sentences. Reply ONLY in the ${currentLanguage} language.`);
         if (response === "TOKENS_FINISHED") {
           const warning = t('tokens_finished', currentLanguage);
           setStatus(warning);
@@ -487,7 +487,7 @@ export default function App() {
     try {
       const image = captureImage();
       if (image) {
-        const response = await analyzeScene(image, `Identify the Indian currency note in this image. State only the denomination. If unclear, say 'Currency not clear. Please hold steady.'. Reply ONLY in the ${currentLanguage} language.`);
+        const response = await analyzeScene(image, `Analyze the Indian currency note in this image. 1. If a valid currency note is detected, state its denomination clearly. 2. If the currency note appears suspicious, counterfeit, or fake, explicitly warn the user that it looks fake. 3. If no currency is shown, or nothing is visible in the frame, state clearly that no currency or nothing was detected. Reply ONLY in the ${currentLanguage} language.`);
         if (response === "TOKENS_FINISHED") {
           const warning = t('tokens_finished', currentLanguage);
           setStatus(warning);
