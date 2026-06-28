@@ -602,7 +602,7 @@ export default function App() {
   // --- Theme Classes ---
   // Requested Light Mode: bg #F4F9FF, cards white, text #0D47A1. Dark Mode: bg #0A192F, cards #112240, text #E3F2FD.
   const bgClass = isDarkMode ? "bg-[#0A192F] text-[#E3F2FD]" : "bg-[#F4F9FF] text-[#0D47A1]";
-  const cardClass = isDarkMode ? "bg-[#112240] border-[#112240] text-[#E3F2FD] shadow-md" : "bg-white border-white text-[#0D47A1] shadow-md";
+  const cardClass = isDarkMode ? "bg-[#112240] border-[#253959] text-[#E3F2FD] shadow-md hover:border-[#42A5F5] transition-all duration-300" : "bg-white border-[#D0E3FF] text-[#0D47A1] shadow-md hover:border-[#1E88E5] transition-all duration-300";
   const headerClass = "bg-gradient-to-r from-[#1E88E5] to-[#42A5F5] border-transparent text-white shadow-lg";
   const inputClass = isDarkMode ? "bg-[#0A192F] border-[#42A5F5] text-[#E3F2FD] focus:ring-[#42A5F5]" : "bg-[#E3F2FD] border-[#1E88E5] text-[#0D47A1] focus:ring-[#1E88E5]";
   const buttonGradientClass = "bg-gradient-to-br from-[#1E88E5] to-[#42A5F5] text-white border-transparent";
@@ -1323,7 +1323,7 @@ function CameraOverlayActions({
   );
 }
 
-function AccessibleButton({ icon, label, onActivate, speak, disabled, color = "bg-white text-[#0D47A1] border-white shadow-md dark:bg-[#112240] dark:text-[#E3F2FD] dark:border-[#112240]" }: AccessibleButtonProps) {
+function AccessibleButton({ icon, label, onActivate, speak, disabled, color = "bg-white text-[#0D47A1] border-[#D0E3FF] shadow-md hover:border-[#1E88E5] transition-all duration-300 dark:bg-[#112240] dark:text-[#E3F2FD] dark:border-[#253959] dark:hover:border-[#42A5F5]" }: AccessibleButtonProps) {
   const handleTap = useAccessibleButton(label, onActivate, speak);
 
   return (
@@ -1331,7 +1331,7 @@ function AccessibleButton({ icon, label, onActivate, speak, disabled, color = "b
       whileTap={{ scale: 0.95 }}
       onClick={handleTap}
       disabled={disabled}
-      className={`flex flex-col items-center justify-center p-6 rounded-[16px] shadow-sm border ${color} ${disabled ? 'opacity-50' : 'active:opacity-80'} transition-colors touch-manipulation`}
+      className={`flex flex-col items-center justify-center p-6 rounded-[16px] shadow-sm border ${color} ${disabled ? 'opacity-50' : 'active:opacity-80'} transition-all duration-300 touch-manipulation`}
     >
       <div className="mb-3 pointer-events-none">{icon}</div>
       <span className="text-lg font-semibold tracking-tight pointer-events-none">{label}</span>
