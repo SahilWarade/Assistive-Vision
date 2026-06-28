@@ -57,7 +57,7 @@ const newKeys = {
     notify_btn_edit: { English: "Edit Location", Hindi: "स्थान संपादित करें", Urdu: "مقام میں ترمیم کریں" },
     notify_tracking_active: { English: "Tracking Active", Hindi: "ट्रैकिंग सक्रिय", Urdu: "ٹریکنگ فعال" },
     notify_remote_title: { English: "Remote Guardian", Hindi: "रिमोट गार्जियन", Urdu: "ریموٹ گارڈین" },
-    notify_remote_sub: { English: "Connect guardian to live location dashboard", Hindi: "अभिभावक को लाइव लोकेशन डैशबोर्ड से कनेक्ट करें", Urdu: "گارڈین کو لائیو لوکیشن ڈیش بورڈ سے مربوط کریں" },
+    notify_remote_sub: { English: "Connect guardian to current location dashboard", Hindi: "अभिभावक को लाइव लोकेशन डैशबोर्ड से कनेक्ट करें", Urdu: "گارڈین کو لائیو لوکیشن ڈیش بورڈ سے مربوط کریں" },
     notify_remote_sub2: { English: "Share tracking QR externally.", Hindi: "बाहरी रूप से ट्रैकिंग क्यूआर साझा करें।", Urdu: "بیرونی طور پر ٹریکنگ کیو آر شیئر کریں۔" }
 };
 

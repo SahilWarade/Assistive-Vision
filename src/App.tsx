@@ -687,12 +687,12 @@ export default function App() {
       void speak("Location not supported");
       return;
     }
-    void speak("Sending live location via WhatsApp");
+    void speak("Sending current location via WhatsApp");
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        const msg = encodeURIComponent(`🚨 EMERGENCY ALERT 🚨\nI am in an emergency situation, please help! This is my live location: https://www.google.com/maps?q=${lat},${lng}`);
+        const msg = encodeURIComponent(`🚨 EMERGENCY ALERT 🚨\nI am in an emergency situation, please help! This is my current location: https://www.google.com/maps?q=${lat},${lng}`);
         const phone = emergencyData.contactPhone.replace(/\D/g, '');
         const waUrl = `https://wa.me/${phone}?text=${msg}`;
         window.open(waUrl, '_blank');
@@ -741,7 +741,7 @@ export default function App() {
                 <AccessibleButton icon={<Banknote size={36} />} label={t('btn_currency', currentLanguage)} onActivate={() => { setCurrentPage('currency'); }} speak={speak} disabled={processing} color={cardClass} />
                 <AccessibleButton icon={<Languages size={36} />} label={t('btn_language', currentLanguage)} onActivate={() => { setCurrentPage('language'); }} speak={speak} color={cardClass} />
                 <AccessibleButton icon={<HeartPulse size={36} />} label={t('btn_emergency', currentLanguage)} onActivate={() => { setCurrentPage('emergency'); }} speak={speak} color="bg-red-600 border-red-700 text-white" />
-                <AccessibleButton icon={<MapIcon size={36} />} label={t('btn_location', currentLanguage) || 'Send Location'} onActivate={handleSendLocation} speak={speak} color="bg-green-600 border-green-700 text-white" />
+                <AccessibleButton icon={<MapIcon size={36} />} label={t('btn_location', currentLanguage) || 'Current Location'} onActivate={handleSendLocation} speak={speak} color="bg-green-600 border-green-700 text-white" />
                 <AccessibleButton icon={<Shield size={36} />} label={t('btn_permissions', currentLanguage)} onActivate={() => { setCurrentPage('permissions'); }} speak={speak} color={cardClass} />
                 <AccessibleButton icon={<Info size={36} />} label={t('btn_about', currentLanguage)} onActivate={() => { setCurrentPage('about'); }} speak={speak} color={cardClass} />
                 <AccessibleButton icon={<HelpCircle size={36} />} label={t('btn_how_to_use', currentLanguage)} onActivate={() => { setCurrentPage('how-to-use'); }} speak={speak} color={cardClass} />

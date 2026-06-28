@@ -393,7 +393,7 @@ export const translations: Record<string, Partial<Record<LanguageCode, string>>>
         Urdu: "اجازتیں"
     },
     btn_location: {
-        English: "Send Location",
+        English: "Current Location",
         Hindi: "लोकेशन भेजें",
         Marathi: "स्थान पाठवा",
         Tamil: "இருப்பிடத்தை அனுப்பு",
@@ -1396,7 +1396,7 @@ export const translations: Record<string, Partial<Record<LanguageCode, string>>>
         Urdu: "ریموٹ گارڈین"
     },
     notify_remote_sub: {
-        English: "Connect guardian to live location dashboard",
+        English: "Connect guardian to current location dashboard",
         Hindi: "अभिभावक को लाइव लोकेशन डैशबोर्ड से कनेक्ट करें",
         Marathi: "पालकाला थेट स्थान डॅशबोर्डशी जोडा",
         Tamil: "நேரடி இருப்பிட டாஷ்போர்டுடன் பாதுகாவலரை இணைக்கவும்",
