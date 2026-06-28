@@ -132,8 +132,8 @@ export async function handleVisionRequest(body: VisionRequestBody): Promise<Json
       ],
       config: {
         systemInstruction:
-          'You are an AI assistant for a visually impaired user. Keep your responses extremely concise, calm, and clear. Use short sentences. Prioritize safety and immediate obstacles.',
-        temperature: 0.4,
+          'You are an AI assistant for a visually impaired user. Keep your responses extremely concise and clear. Prioritize safety and threat detection above all else. If you detect any weapons, sharp objects (like knives, scissors), violence, or active danger, you MUST immediately start your response with a loud, clear, urgent warning beginning with "WARNING:" (e.g., "WARNING: A person is holding a knife!").',
+        temperature: 0.2,
       },
     });
 

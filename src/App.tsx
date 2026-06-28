@@ -421,7 +421,7 @@ export default function App() {
     if (!image) return;
 
     if (currentPage === 'describe') {
-      await analyzeProvidedImage(image, `Describe the surroundings concisely for a blind person. Mention any immediate obstacles or people. CRITICAL SAFETY WARNING: If there is any active threat, danger, or hazard in the scene (such as a person attacking, someone holding a weapon, sharp or dangerous objects, or a threatening animal), you MUST immediately start your response with a clear, urgent warning (e.g. 'WARNING: ...') detailing the threat. Keep it under 3 sentences. Reply ONLY in the ${currentLanguage} language.`);
+      await analyzeProvidedImage(image, `CRITICAL SAFETY & THREAT EVALUATION: First, look for any active threats (such as a person attacking, someone holding a weapon like a knife or scissors, sharp/dangerous objects, heavy metal weapons, or dangerous animals). If ANY threat is present, you MUST bypass normal descriptions and output ONLY a loud, clear warning starting with 'WARNING:' (e.g. 'WARNING: A man is holding a knife!' or 'WARNING: A man is trying to attack you!'). Only if the scene is completely safe, describe the surroundings concisely for a blind person under 3 sentences. Reply ONLY in the ${currentLanguage} language.`);
     } else if (currentPage === 'currency') {
       await analyzeProvidedImage(image, `Analyze the Indian currency note in this image. 1. If a valid currency note is detected, state its denomination clearly. 2. If the currency note appears suspicious, counterfeit, or fake, explicitly warn the user that it looks fake. 3. If no currency is shown, or nothing is visible in the frame, state clearly that no currency or nothing was detected. Reply ONLY in the ${currentLanguage} language.`);
     } else if (currentPage === 'find') {
@@ -444,7 +444,7 @@ export default function App() {
     try {
       const image = captureImage();
       if (image) {
-        const response = await analyzeScene(image, `Describe the surroundings concisely for a blind person. Mention any immediate obstacles or people. CRITICAL SAFETY WARNING: If there is any active threat, danger, or hazard in the scene (such as a person attacking, someone holding a weapon, sharp or dangerous objects, or a threatening animal), you MUST immediately start your response with a clear, urgent warning (e.g. 'WARNING: ...') detailing the threat. Keep it under 3 sentences. Reply ONLY in the ${currentLanguage} language.`);
+        const response = await analyzeScene(image, `CRITICAL SAFETY & THREAT EVALUATION: First, look for any active threats (such as a person attacking, someone holding a weapon like a knife or scissors, sharp/dangerous objects, heavy metal weapons, or dangerous animals). If ANY threat is present, you MUST bypass normal descriptions and output ONLY a loud, clear warning starting with 'WARNING:' (e.g. 'WARNING: A man is holding a knife!' or 'WARNING: A man is trying to attack you!'). Only if the scene is completely safe, describe the surroundings concisely for a blind person under 3 sentences. Reply ONLY in the ${currentLanguage} language.`);
         if (response === "TOKENS_FINISHED") {
           const warning = t('tokens_finished', currentLanguage);
           setStatus(warning);
